@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Fingerprint, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Fingerprint, Loader2, Eye, EyeOff } from 'lucide-react'; // Link dihapus
 import axios from 'axios';
 
 export default function Login() {
@@ -12,10 +11,7 @@ export default function Login() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        // 1. BERSIHKAN DATA LAMA (PENTING!)
         localStorage.clear(); 
-
         setError('');
         setLoading(true);
 
@@ -33,24 +29,19 @@ export default function Login() {
                 }
             );
 
-            // 2. AMBIL DATA DENGAN NAMA YANG BENAR ('user')
             const { access_token, user } = response.data;
 
             if (!access_token) {
                 throw new Error('Token tidak ditemukan');
             }
 
-            // 3. SIMPAN DENGAN KUNCI YANG BENAR ('user_info')
-            // App.tsx kamu nyarinya 'user_info', bukan 'data'
             localStorage.setItem('auth_token', access_token);
             localStorage.setItem('user_info', JSON.stringify(user)); 
 
-            // 4. LOGIKA REDIRECT (PEMBAGIAN JALUR)
-            // Jika Posisi ID = 1 (Admin)
             if (Number(user.posisi_id) === 1) {
-                window.location.href = '/admin/dashboard'; // Sesuai App.tsx kamu
+                window.location.href = '/admin/dashboard'; 
             } else {
-                window.location.href = '/'; // Karyawan biasa
+                window.location.href = '/'; 
             }
 
         } catch (err: any) {
@@ -116,7 +107,7 @@ export default function Login() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-medium"
-                                    placeholder="admin@kantor.com"
+                                    placeholder="nama@kantor.com"
                                     required
                                 />
                             </div>
@@ -156,14 +147,13 @@ export default function Login() {
                             </button>
                         </form>
 
+                        {/* BAGIAN LINK REGISTER SUDAH DIHAPUS DI SINI */}
                         <div className="mt-8 text-center">
-                            <p className="text-gray-500">
-                                Belum punya akun?{' '}
-                                <Link to="/register" className="text-blue-600 font-bold hover:underline">
-                                    Daftar Karyawan Baru
-                                </Link>
+                            <p className="text-gray-400 text-sm">
+                                Belum punya akun? Hubungi Admin HRD.
                             </p>
                         </div>
+                        
                     </div>
                 </div>
 

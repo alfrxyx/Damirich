@@ -1,84 +1,80 @@
-import { Bell, Menu } from 'lucide-react';
+import { Bell, Menu, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-interface TopBarProps {
-  onMenuClick?: () => void;
-}
+export default function TopBar() {
+  const [user, setUser] = useState<any>(null);
 
-interface UserData {
-  nama: string;
-  email: string;
-  posisi_id: number;
-}
-
-export default function TopBar({ onMenuClick }: TopBarProps) {
-  const [user, setUser] = useState<UserData | null>(null);
-  const navigate = useNavigate();
-
+  // 1. Ambil Data User saat komponen dimuat
   useEffect(() => {
-    const userDataString = localStorage.getItem('user');
-    if (userDataString) {
+    const userString = localStorage.getItem('user_info');
+    if (userString) {
       try {
-        const userData = JSON.parse(userDataString);
-        setUser(userData);
+        setUser(JSON.parse(userString));
       } catch (e) {
-        console.error("Gagal parse user data:", e);
-        localStorage.clear();
-        navigate('/login');
+        console.error("Gagal load user info di TopBar");
       }
     }
-  }, [navigate]);
+  }, []);
 
-  const getInitials = (name: string): string => {
-    if (!name) return 'JD';
-    const parts = name.split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return parts[0][0].toUpperCase();
+  // Helper untuk menentukan label jabatan
+  const getRoleLabel = (posisiId: number) => {
+    if (posisiId === 1) return 'Administrator';
+    if (posisiId === 2) return 'Staff';
+    if (posisiId === 3) return 'Manager';
+    return 'Karyawan';
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/login');
+  // Helper untuk inisial nama
+  const getInitials = (name: string) => {
+    if (!name) return 'U';
+    return name.charAt(0).toUpperCase();
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20 w-full">
-
+    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-20 shadow-sm">
+      
+      {/* Bagian Kiri (Bisa untuk Breadcrumb atau Menu Toggle Mobile nanti) */}
       <div className="flex items-center gap-4">
-        <button
-          onClick={onMenuClick}
-          className="lg:hidden p-2 -ml-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 focus:outline-none"
-        >
-          <Menu className="w-6 h-6" />
+        <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 lg:hidden">
+          <Menu size={20} />
         </button>
+        {/* Breadcrumb Simpel */}
+        <h2 className="text-sm font-medium text-gray-500 hidden sm:block">
+          Portal {user?.posisi_id === 1 ? 'Admin' : 'Karyawan'}
+        </h2>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-        <button className="p-2 hover:bg-gray-100 rounded-full relative transition-colors">
-          <Bell className="w-5 h-5 text-gray-600" />
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
+      {/* Bagian Kanan (Profil & Notif) */}
+      <div className="flex items-center gap-4">
+        
+        {/* Notifikasi Icon */}
+        <button className="p-2 rounded-full hover:bg-gray-100 text-gray-500 relative transition-colors">
+          <Bell size={20} />
+          <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
         </button>
+        
+        {/* Garis Pemisah */}
+        <div className="h-6 w-px bg-gray-200 mx-1"></div>
 
-        <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block"></div>
-
-        {/* 🔥 BAGIAN PROFIL — sudah aman, tidak logout lagi */}
-        <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-1 rounded-lg transition-colors">
+        {/* Profil User Dinamis */}
+        <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-gray-900 leading-none mb-1">
-              {user?.nama || 'John Doe'}
+            {/* NAMA ASLI DARI DATABASE */}
+            <p className="text-sm font-bold text-gray-900 leading-none">
+                {user?.name || 'Pengguna'}
             </p>
-            <p className="text-xs text-gray-500 leading-none">
-              Karyawan
+            {/* JABATAN ASLI */}
+            <p className="text-xs text-gray-500 mt-1">
+                {user ? getRoleLabel(Number(user.posisi_id)) : 'Memuat...'}
             </p>
           </div>
-
-          <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm ring-2 ring-blue-50">
-            {user ? getInitials(user.nama) : 'JD'}
+          
+          {/* Avatar Inisial */}
+          <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-md border-2 border-blue-100">
+            {getInitials(user?.name)}
           </div>
         </div>
+
       </div>
     </header>
   );

@@ -6,6 +6,7 @@ import LeaveRequest from './pages/LeaveRequest';
 import Login from './components/Auth/Login'; 
 import Register from './pages/Register'; 
 import AdminDashboard from './pages/AdminDashboard';
+import ManageKaryawan from './pages/ManageKaryawan';
 
 // --- GUARD: PUBLIC ROUTE ---
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
@@ -41,7 +42,7 @@ function App() {
             <Routes>
                 {/* HALAMAN LOGIN & REGISTER */}
                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                <Route path="/register" element={<Register />} />
+                {/* <Route path="/register" element={<Register />} /> */}
 
                 {/* === SEMUA HALAMAN YANG PAKAI SIDEBAR (USER & ADMIN) === */}
                 <Route element={
@@ -55,8 +56,8 @@ function App() {
                     <Route path="/settings" element={<div className="p-6">Halaman Pengaturan</div>} />
 
                     {/* 2. Area Admin (SEKARANG SUDAH PAKAI SIDEBAR JUGA) */}
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                    
+                    <Route path="/admin/dashboard" element={<AdminDashboard />}/>
+                    <Route path="/admin/karyawan" element={<ManageKaryawan/>}/>
                     {/* Menu admin lain bisa ditambah di sini */}
                     <Route path="/admin/rekap" element={<div className="p-6">Halaman Rekap</div>} />
                 </Route>
