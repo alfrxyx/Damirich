@@ -48,7 +48,7 @@ export default function Login() {
             // 4. LOGIKA REDIRECT (PEMBAGIAN JALUR)
             // Jika Posisi ID = 1 (Admin)
             if (Number(user.posisi_id) === 1) {
-                window.location.href = '/admin-dashboard'; // Sesuai App.tsx kamu
+                window.location.href = '/admin/dashboard'; // Sesuai App.tsx kamu
             } else {
                 window.location.href = '/'; // Karyawan biasa
             }
