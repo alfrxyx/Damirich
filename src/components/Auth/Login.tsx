@@ -1,22 +1,27 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Fingerprint, Mail, Lock, Loader2 } from 'lucide-react';
+import { Fingerprint, Loader2, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // 1. BERSIHKAN DATA LAMA (PENTING!)
+        localStorage.clear(); 
+
         setError('');
         setLoading(true);
 
         try {
             const API_URL = 'http://127.0.0.1:8000/api';
-
+            
             const response = await axios.post(
                 `${API_URL}/login`,
                 { email, password },
@@ -28,20 +33,25 @@ export default function Login() {
                 }
             );
 
-            // Kode ini sudah BENAR karena mengambil 'data' dari response.data
-            const { access_token, data } = response.data; // data = { id: 1, nama: "...", posisi_id: 1/2, ... }
+            // 2. AMBIL DATA DENGAN NAMA YANG BENAR ('user')
+            const { access_token, user } = response.data;
 
             if (!access_token) {
                 throw new Error('Token tidak ditemukan');
             }
 
-            // Simpan token (kunci untuk akses API)
+            // 3. SIMPAN DENGAN KUNCI YANG BENAR ('user_info')
+            // App.tsx kamu nyarinya 'user_info', bukan 'data'
             localStorage.setItem('auth_token', access_token);
-            // Simpan data karyawan (termasuk posisi_id) untuk pengecekan Front-End
-            localStorage.setItem('user_info', JSON.stringify(data)); 
+            localStorage.setItem('user_info', JSON.stringify(user)); 
 
-            // Redirect ke halaman utama, di mana App.tsx akan menjalankan ProtectedRoute
-            window.location.href = '/';
+            // 4. LOGIKA REDIRECT (PEMBAGIAN JALUR)
+            // Jika Posisi ID = 1 (Admin)
+            if (Number(user.posisi_id) === 1) {
+                window.location.href = '/admin-dashboard'; // Sesuai App.tsx kamu
+            } else {
+                window.location.href = '/'; // Karyawan biasa
+            }
 
         } catch (err: any) {
             console.error('Login gagal:', err);
@@ -52,99 +62,111 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
-                
-                <div className="bg-blue-600 p-8 text-center">
-                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-                        <Fingerprint className="w-8 h-8 text-white" />
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div className="max-w-7xl w-full bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+
+                {/* BAGIAN KIRI (GAMBAR/GRADIENT) */}
+                <div className="md:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-900 p-12 lg:p-16 text-white flex flex-col justify-between relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full mix-blend-overlay filter blur-3xl opacity-30 translate-x-1/2 -translate-y-1/2"></div>
+                    <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-500/20 rounded-full mix-blend-overlay filter blur-3xl opacity-30 -translate-x-1/2 translate-y-1/2"></div>
+
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl">
+                                <Fingerprint className="w-8 h-8 text-white" />
+                            </div>
+                            <span className="text-xl font-bold tracking-wide text-blue-100">DAMIRICH</span>
+                        </div>
                     </div>
-                    <h2 className="text-2xl font-bold text-white">Absen Damirich</h2>
-                    <p className="text-blue-100 text-sm mt-1">
-                        Silakan masuk untuk melanjutkan
-                    </p>
+
+                    <div className="relative z-10 mt-12 md:mt-0">
+                        <h1 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+                            Sistem Absensi <br/>
+                            <span className="text-blue-200">Terintegrasi.</span>
+                        </h1>
+                        <p className="text-blue-100/80 text-lg font-light leading-relaxed max-w-md">
+                            Platform manajemen kehadiran karyawan yang akurat, real-time, dan mudah diakses dari mana saja.
+                        </p>
+                    </div>
+
+                    <div className="relative z-10 text-sm text-blue-200/60 font-medium">
+                        © 2025 Damirich Corp. All rights reserved.
+                    </div>
                 </div>
 
-                <div className="p-8">
-                    <form onSubmit={handleLogin} className="space-y-6">
-                        
-                        {error && (
-                            <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg flex items-center gap-2">
-                                <span className="font-medium">Error:</span> {error}
-                            </div>
-                        )}
+                {/* BAGIAN KANAN (FORM LOGIN) */}
+                <div className="md:w-1/2 bg-white p-8 md:p-16 lg:p-20 flex flex-col justify-center">
+                    <div className="max-w-md mx-auto w-full">
+                        <div className="mb-10">
+                            <h2 className="text-3xl font-bold text-gray-900 mb-2">Selamat Datang</h2>
+                            <p className="text-gray-500 text-lg">Silakan login ke akun Anda.</p>
+                        </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">
-                                Email Address
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <form onSubmit={handleLogin} className="space-y-6">
+                            {error && (
+                                <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded-r-lg font-medium flex items-center animate-pulse">
+                                    <span className="mr-2">⚠️</span> {error}
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-gray-700">Email Perusahaan</label>
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-medium"
                                     placeholder="admin@kantor.com"
                                     required
                                 />
                             </div>
-                        </div>
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">
-                                Password
-                            </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                                    placeholder="••••••••"
-                                    required
-                                />
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-sm font-semibold text-gray-700">Password</label>
+                                    <a href="#" className="text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+                                        Lupa password?
+                                    </a>
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-medium pr-12"
+                                        placeholder="••••••••"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                    >
+                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Sedang Memproses...
-                                </>
-                            ) : (
-                                'Masuk Sekarang'
-                            )}
-                        </button>
-                    </form>
-
-                    <div className="mt-6 text-center pt-4 border-t border-gray-100">
-                        <p className="text-sm text-gray-500">
-                            Belum terdaftar?{' '}
-                            <Link
-                                to="/register"
-                                className="text-blue-600 hover:underline font-medium"
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40 transition-all transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
                             >
-                                Daftar Akun Baru
-                            </Link>
-                        </p>
-                    </div>
+                                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Masuk Akun'}
+                            </button>
+                        </form>
 
-                    <div className="mt-2 text-center">
-                        <p className="text-xs text-gray-500">
-                            Lupa password?{' '}
-                            <span className="text-blue-600 hover:underline cursor-pointer">
-                                Hubungi Admin
-                            </span>
-                        </p>
+                        <div className="mt-8 text-center">
+                            <p className="text-gray-500">
+                                Belum punya akun?{' '}
+                                <Link to="/register" className="text-blue-600 font-bold hover:underline">
+                                    Daftar Karyawan Baru
+                                </Link>
+                            </p>
+                        </div>
                     </div>
                 </div>
+
             </div>
         </div>
     );

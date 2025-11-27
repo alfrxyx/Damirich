@@ -17,7 +17,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userDataString = localStorage.getItem('user_info');
+    const userDataString = localStorage.getItem('user');
     if (userDataString) {
       try {
         const userData = JSON.parse(userDataString);
