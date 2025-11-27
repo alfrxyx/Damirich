@@ -4,7 +4,8 @@ import MainLayout from './components/Layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import LeaveRequest from './pages/LeaveRequest'; 
 import Login from './components/Auth/Login'; 
-import Register from './pages/Register'; 
+// import Register from './pages/Register';
+import Settings from './pages/Settings'; 
 import AdminDashboard from './pages/AdminDashboard';
 import ManageKaryawan from './pages/ManageKaryawan';
 
@@ -53,7 +54,7 @@ function App() {
                     {/* 1. Area Karyawan */}
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/cuti" element={<LeaveRequest />} />
-                    <Route path="/settings" element={<div className="p-6">Halaman Pengaturan</div>} />
+                    <Route path="/settings" element={<Settings />} />
 
                     {/* 2. Area Admin (SEKARANG SUDAH PAKAI SIDEBAR JUGA) */}
                     <Route path="/admin/dashboard" element={<AdminDashboard />}/>

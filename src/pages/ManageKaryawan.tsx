@@ -201,7 +201,7 @@ export default function ManageKaryawan() {
 
             {/* MODAL TAMBAH KARYAWAN (Tetap Sama) */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in">
+                <div className="fixed inset-0 flex items-center justify-center z-50 p-4 animate-fade-in">
                     <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
                         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                             <h3 className="font-bold text-lg text-gray-800">Tambah Karyawan Baru</h3>

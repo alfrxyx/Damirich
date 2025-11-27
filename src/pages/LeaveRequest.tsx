@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, Clock, AlertCircle, CheckCircle, XCircle, Loader2, Plus, Trash2 } from 'lucide-react';
+import { 
+  Calendar, 
+  Clock, 
+  AlertCircle, 
+  CheckCircle, 
+  XCircle, 
+  Loader2, 
+  Plus, 
+  Trash2 
+} from 'lucide-react';
 
 export default function LeaveRequest() {
   // State untuk Form Permohonan Cuti
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [leaveType, setLeaveType] = useState<string>('annual'); // default: cuti tahunan
+  const [leaveType, setLeaveType] = useState<string>('annual');
   const [reason, setReason] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,14 +38,10 @@ export default function LeaveRequest() {
       const response = await axios.get(`${API_URL}/leave-request`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      const data = response.data && Array.isArray(response.data.data) 
-        ? response.data.data 
-        : [];
-
+      const data = Array.isArray(response.data.data) ? response.data.data : [];
       setLeaveRequests(data);
     } catch (err: any) {
-      console.error("Gagal memuat riwayat permohonan cuti:", err.message || err);
+      console.error("Gagal memuat riwayat cuti:", err);
       setError("Gagal memuat data permohonan cuti.");
     } finally {
       setFetching(false);
@@ -45,7 +50,6 @@ export default function LeaveRequest() {
 
   useEffect(() => {
     fetchLeaveRequests();
-    // Jika token tidak ada, redirect ke login
     if (!token) window.location.href = '/login';
   }, []);
 
@@ -56,21 +60,14 @@ export default function LeaveRequest() {
     setSuccess('');
     setLoading(true);
 
-    // Validasi input
-    if (!startDate || !endDate) {
-      setError("Tanggal mulai dan tanggal selesai wajib diisi.");
+    if (!startDate || !endDate || !reason.trim()) {
+      setError("Semua field wajib diisi.");
       setLoading(false);
       return;
     }
 
     if (new Date(startDate) > new Date(endDate)) {
-      setError("Tanggal selesai tidak boleh lebih awal dari tanggal mulai.");
-      setLoading(false);
-      return;
-    }
-
-    if (!reason.trim()) {
-      setError("Alasan cuti wajib diisi.");
+      setError("Tanggal selesai tidak boleh lebih awal.");
       setLoading(false);
       return;
     }
@@ -80,13 +77,12 @@ export default function LeaveRequest() {
       formData.append('start_date', startDate);
       formData.append('end_date', endDate);
       formData.append('type', leaveType);
-      formData.append('reason', reason);
+      formData.append('reason', reason.trim());
 
       const response = await axios.post(`${API_URL}/leave-request`, formData, {
         headers: { 
-          Authorization: `Bearer ${token}`, 
-          'Content-Type': 'multipart/form-data'
-        }
+          Authorization: `Bearer ${token}`,
+        } // ⚠️ HAPUS 'Content-Type' — biarkan Axios atur otomatis
       });
 
       setSuccess(response.data.message || "Permohonan cuti berhasil diajukan.");
@@ -94,88 +90,128 @@ export default function LeaveRequest() {
       setEndDate('');
       setReason('');
       setLeaveType('annual');
-
-      // Refresh daftar permohonan
       await fetchLeaveRequests();
-
     } catch (err: any) {
       console.error("Error saat mengajukan cuti:", err);
-      const msg = err.response?.data?.message || "Gagal mengajukan permohonan cuti. Silakan coba lagi.";
+      const msg = err.response?.data?.message || "Gagal mengajukan cuti. Coba lagi.";
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- HAPUS PERMOHONAN CUTI (Jika diperbolehkan oleh backend) ---
+  // --- HAPUS PERMOHONAN CUTI ---
   const handleDelete = async (id: number) => {
-    if (!confirm("Anda yakin ingin membatalkan permohonan cuti ini?")) return;
+    if (!confirm("Batalkan permohonan ini?")) return;
 
     try {
       await axios.delete(`${API_URL}/leave-request/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setSuccess("Permohonan cuti berhasil dibatalkan.");
-      await fetchLeaveRequests(); // Refresh list
+      setSuccess("Permohonan cuti dibatalkan.");
+      await fetchLeaveRequests();
     } catch (err: any) {
-      console.error("Gagal membatalkan permohonan cuti:", err);
-      setError("Gagal membatalkan permohonan cuti. Silakan coba lagi.");
+      setError("Gagal membatalkan permohonan cuti.");
+    }
+  };
+
+  // Helper untuk jenis cuti
+  const getLeaveTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      annual: 'Tahunan',
+      sick: 'Sakit',
+      personal: 'Pribadi',
+      maternity: 'Melahirkan',
+      paternity: 'Ayah'
+    };
+    return labels[type] || type;
+  };
+
+  // Helper untuk status badge
+  const getStatusBadge = (status: string) => {
+    const base = "inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200";
+    
+    switch (status) {
+      case 'approved':
+        return (
+          <span className={`${base} bg-green-100 text-green-800 ring-1 ring-green-200`}>
+            <CheckCircle size={12} className="mr-1" /> Disetujui
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className={`${base} bg-red-100 text-red-800 ring-1 ring-red-200`}>
+            <XCircle size={12} className="mr-1" /> Ditolak
+          </span>
+        );
+      default:
+        return (
+          <span className={`${base} bg-yellow-100 text-yellow-800 ring-1 ring-yellow-200 animate-pulse`}>
+            <Clock size={12} className="mr-1" /> Menunggu
+          </span>
+        );
     }
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full">
+    <div className="flex flex-col gap-8 w-full animate-fade-in">
       
       {/* HEADER */}
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-gray-900">Permohonan Cuti</h1>
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <Calendar className="text-blue-600" /> Permohonan Cuti
+        </h1>
         <p className="text-gray-500 text-sm">Ajukan cuti Anda melalui form di bawah ini.</p>
       </div>
 
       {/* FORM AJUAN CUTI */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 transition-all hover:shadow-md">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Plus className="w-5 h-5 text-blue-600" /> Ajukan Permohonan Cuti
         </h2>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2 items-start text-red-600 text-sm">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex gap-2 items-start text-red-600 text-sm animate-fade-in">
             <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex gap-2 items-start text-green-600 text-sm">
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl flex gap-2 items-start text-green-600 text-sm animate-fade-in">
             <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <span>{success}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           
-          {/* Tanggal Mulai */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Mulai</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Tanggal Mulai */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <Calendar size={14} /> Tanggal Mulai
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              />
+            </div>
 
-          {/* Tanggal Selesai */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Selesai</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
+            {/* Tanggal Selesai */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <Calendar size={14} /> Tanggal Selesai
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              />
+            </div>
           </div>
 
           {/* Jenis Cuti */}
@@ -184,7 +220,7 @@ export default function LeaveRequest() {
             <select
               value={leaveType}
               onChange={(e) => setLeaveType(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white"
             >
               <option value="annual">Cuti Tahunan</option>
               <option value="sick">Cuti Sakit</option>
@@ -200,19 +236,21 @@ export default function LeaveRequest() {
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Jelaskan alasan cuti Anda..."
-              rows={4}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+              placeholder="Jelaskan alasan cuti Anda secara singkat..."
+              rows={3}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none transition-all"
             />
           </div>
 
           {/* Submit Button */}
-          <div className="pt-4">
+          <div className="pt-2">
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-all shadow-sm flex justify-center items-center gap-2 disabled:opacity-70"
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium text-sm 
+                         hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 
+                         shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 
+                         disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
             >
               {loading ? (
                 <>
@@ -220,7 +258,7 @@ export default function LeaveRequest() {
                   Mengajukan...
                 </>
               ) : (
-                'Ajukan Cuti'
+                'Ajukan Permohonan Cuti'
               )}
             </button>
           </div>
@@ -228,66 +266,64 @@ export default function LeaveRequest() {
       </div>
 
       {/* RIWAYAT PERMOHONAN CUTI */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 transition-all hover:shadow-md">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Calendar className="w-5 h-5 text-blue-600" /> Riwayat Permohonan Cuti
         </h2>
 
         {fetching ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          <div className="flex justify-center py-10">
+            <div className="flex flex-col items-center">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
+              <p className="text-gray-500 text-sm">Memuat data...</p>
+            </div>
           </div>
         ) : leaveRequests.length === 0 ? (
-          <div className="border-2 border-dashed border-gray-100 rounded-xl p-8 text-center bg-gray-50/50">
-            <div className="inline-flex p-3 rounded-full bg-gray-100 mb-3 text-gray-400">
-              <Calendar className="w-6 h-6" />
+          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center bg-gray-50/40">
+            <div className="inline-flex p-4 rounded-full bg-gray-100 mb-4 text-gray-400">
+              <Calendar className="w-8 h-8" />
             </div>
-            <p className="text-gray-500">Belum ada permohonan cuti.</p>
+            <h3 className="text-gray-500 font-medium">Belum ada permohonan cuti</h3>
+            <p className="text-gray-400 text-sm mt-1">Ajukan cuti pertama Anda hari ini!</p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-gray-100">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-gray-50 text-gray-900 font-semibold border-b border-gray-100">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left min-w-full">
+              <thead className="bg-gray-50 text-gray-600 font-semibold">
                 <tr>
-                  <th className="px-4 py-3">Tanggal</th>
+                  <th className="px-4 py-3 text-left">Tanggal</th>
                   <th className="px-4 py-3">Durasi</th>
                   <th className="px-4 py-3">Jenis</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Aksi</th>
+                  <th className="px-4 py-3 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {leaveRequests.map((req) => (
-                  <tr key={req.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-gray-600">
-                      {new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()}
+                  <tr 
+                    key={req.id} 
+                    className="hover:bg-gray-50 transition-colors duration-150 group"
+                  >
+                    <td className="px-4 py-4 text-gray-800 font-medium">
+                      {new Date(req.start_date).toLocaleDateString('id-ID')} — {new Date(req.end_date).toLocaleDateString('id-ID')}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-4 text-gray-600">
                       {req.duration_days} hari
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
-                        {req.type === 'annual' ? 'Tahunan' :
-                         req.type === 'sick' ? 'Sakit' :
-                         req.type === 'personal' ? 'Pribadi' :
-                         req.type === 'maternity' ? 'Melahirkan' : 'Ayah'}
+                    <td className="px-4 py-4">
+                      <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        {getLeaveTypeLabel(req.type)}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        req.status === 'approved' ? 'bg-green-50 text-green-700' :
-                        req.status === 'rejected' ? 'bg-red-50 text-red-700' :
-                        'bg-yellow-50 text-yellow-700'
-                      }`}>
-                        {req.status === 'approved' ? 'Disetujui' :
-                         req.status === 'rejected' ? 'Ditolak' : 'Menunggu'}
-                      </span>
+                    <td className="px-4 py-4">
+                      {getStatusBadge(req.status)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-4 text-right">
                       {req.status === 'pending' && (
                         <button
                           onClick={() => handleDelete(req.id)}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center gap-1"
+                          className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center gap-1 
+                                     transition-colors duration-200 group-hover:scale-105"
                         >
                           <Trash2 className="w-4 h-4" /> Batalkan
                         </button>
