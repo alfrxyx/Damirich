@@ -11,6 +11,8 @@ import {
   Trash2 
 } from 'lucide-react';
 
+import './DonateButton.css';
+
 export default function LeaveRequest() {
   // State untuk Form Permohonan Cuti
   const [startDate, setStartDate] = useState<string>('');
@@ -26,7 +28,7 @@ export default function LeaveRequest() {
   const [fetching, setFetching] = useState(true);
 
   // Token Autentikasi
-  const token = localStorage.getItem('auth_token');
+  const token = sessionStorage.getItem('auth_token');
   const API_URL = 'http://127.0.0.1:8000/api';
 
   // --- FETCH DAFTAR PERMOHONAN CUTI ---
@@ -226,7 +228,7 @@ export default function LeaveRequest() {
               <option value="sick">Cuti Sakit</option>
               <option value="personal">Cuti Pribadi</option>
               <option value="maternity">Cuti Melahirkan</option>
-              <option value="paternity">Cuti Ayah</option>
+              <option value="paternity">Cuti Lainnya</option>
             </select>
           </div>
 
@@ -243,19 +245,21 @@ export default function LeaveRequest() {
           </div>
 
           {/* Submit Button */}
+          {/* Submit Button */}
           <div className="pt-2">
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium text-sm 
-                         hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 
-                         shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 
-                         disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+              className="btn-donate w-full flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ 
+                '--radii': '0.75rem', // Sesuaikan radius agar rounded-xl seperti input field
+                '--size': '1rem' 
+              } as React.CSSProperties}
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Mengajukan...
+                  <span>Mengajukan...</span>
                 </>
               ) : (
                 'Ajukan Permohonan Cuti'

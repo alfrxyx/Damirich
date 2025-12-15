@@ -1,0 +1,56 @@
+/* LogoutButton.css */
+
+.btn-logout {
+  padding: 0.8em 1.5em; /* Padding disesuaikan */
+  width: 100%; /* Agar memenuhi lebar sidebar */
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  letter-spacing: 3px; /* Sedikit dikurangi agar muat */
+  text-transform: uppercase;
+  cursor: pointer;
+  color: #dc2626; /* WARNA UTAMA: MERAH */
+  transition: all 1000ms;
+  font-size: 13px;
+  position: relative;
+  overflow: hidden;
+  outline: 2px solid #dc2626; /* OUTLINE: MERAH */
+  background: transparent;
+  
+  /* Tambahan agar Icon dan Teks sejajar */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-logout:hover {
+  color: #ffffff;
+  transform: scale(1.02); /* Scale dikurangi sedikit agar tidak nabrak layout */
+  outline: 2px solid #ef4444; /* MERAH LEBIH TERANG SAAT HOVER */
+  box-shadow: 4px 5px 17px -4px #7f1d1d; /* SHADOW MERAH GELAP */
+}
+
+.btn-logout::before {
+  content: "";
+  position: absolute;
+  left: -50px;
+  top: 0;
+  width: 0;
+  height: 100%;
+  background-color: #dc2626; /* BACKGROUND ANIMASI: MERAH */
+  transform: skewX(45deg);
+  z-index: -1;
+  transition: width 1000ms;
+}
+
+.btn-logout:hover::before {
+  width: 250%;
+}
+
+/* Penyesuaian saat sidebar collapse (mengecil) */
+.btn-logout.collapsed {
+  padding: 0.8em 0;
+  justify-content: center;
+  letter-spacing: 0;
+}

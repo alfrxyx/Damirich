@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import axios from 'axios';
 import { 
   AlertTriangle, BarChart2, Users, RefreshCw, 
-  CheckCircle, XCircle, Loader2, Info 
+  CheckCircle, XCircle, Loader2, Info, Clock, CheckSquare
 } from 'lucide-react';
 
 // =========================================================
@@ -25,6 +24,18 @@ interface LeaveRequest {
   type: string;
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
+}
+
+interface Attendance {
+  id: number;
+  karyawan: {
+    nama: string;
+    divisi: { nama: string };
+  };
+  tanggal: string;
+  jam_masuk: string;
+  status: 'on_time' | 'late' | 'absent';
+  keterangan?: string;
 }
 
 const API_URL = 'http://127.0.0.1:8000/api';
@@ -60,7 +71,7 @@ const StatCardSkeleton = () => (
 );
 
 // =========================================================
-// NOTIFIKASI TOAST SEDERHANA (bisa diganti dengan library seperti react-hot-toast)
+// NOTIFIKASI TOAST SEDERHANA
 // =========================================================
 const Toast = ({ message, type }: { message: string; type: 'success' | 'error' | 'info' }) => {
   const bgColor = type === 'success' ? 'bg-green-100' : type === 'error' ? 'bg-red-100' : 'bg-blue-100';
@@ -68,7 +79,7 @@ const Toast = ({ message, type }: { message: string; type: 'success' | 'error' |
   const Icon = type === 'success' ? CheckCircle : type === 'error' ? XCircle : Info;
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg ${bgColor} ${textColor} flex items-center space-x-2 animate-fade-in-up`}>
+    <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg shadow-lg ${bgColor} ${textColor} flex items-center space-x-2`}>
       <Icon size={18} />
       <span className="font-medium">{message}</span>
     </div>
@@ -79,14 +90,16 @@ const Toast = ({ message, type }: { message: string; type: 'success' | 'error' |
 // HALAMAN UTAMA DASHBOARD
 // =========================================================
 export default function AdminDashboard() {
-  const [authToken] = useState<string | null>(localStorage.getItem('auth_token'));
-  
   const [stats, setStats] = useState<Stats>({ total_employees: 0, present_today: 0, late_entries: 0 });
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Ambil token dari localStorage seperti kode asli Anda
+  const authToken = sessionStorage.getItem('auth_token');
 
   // Tutup toast setelah 3 detik
   useEffect(() => {
@@ -97,29 +110,48 @@ export default function AdminDashboard() {
   }, [toast]);
 
   const fetchData = useCallback(async () => {
-    if (!authToken) return;
     setIsLoading(true);
     setErrorMsg(null);
 
     try {
-      const [resStats, resLeaves] = await Promise.all([
-        axios.get(`${API_URL}/admin/dashboard-harian`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }),
-        axios.get(`${API_URL}/admin/leaves`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        })
+      const headers = { 
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      };
+
+      // Parallel fetching - jalankan semua request bersamaan
+      const [statsRes, leavesRes, attendancesRes] = await Promise.all([
+        fetch(`${API_URL}/admin/dashboard-harian`, { headers }),
+        fetch(`${API_URL}/admin/leaves`, { headers }),
+        fetch(`${API_URL}/admin/attendances/today`, { headers })
       ]);
 
-      setStats(resStats.data.stats || { total_employees: 0, present_today: 0, late_entries: 0 });
-      setLeaves(resLeaves.data.data || []);
+      // Check responses
+      if (!statsRes.ok) throw new Error(`Stats API Error: ${statsRes.status}`);
+      if (!leavesRes.ok) throw new Error(`Leaves API Error: ${leavesRes.status}`);
+
+      // Parse JSON
+      const [statsData, leavesData] = await Promise.all([
+        statsRes.json(),
+        leavesRes.json()
+      ]);
+
+      // Parse attendances (optional, tidak error jika gagal)
+      let attendancesData = { data: [] };
+      if (attendancesRes.ok) {
+        attendancesData = await attendancesRes.json();
+      } else {
+        console.warn(`Attendances API Error: ${attendancesRes.status}`);
+      }
+
+      setStats(statsData.stats || { total_employees: 0, present_today: 0, late_entries: 0 });
+      setLeaves(leavesData.data || []);
+      setAttendances(attendancesData.data || []);
+
     } catch (error: any) {
       console.error("Gagal load dashboard:", error);
-      const message = error.response?.status === 403
-        ? "Akses Ditolak! Anda login sebagai Karyawan Biasa, bukan Admin."
-        : "Gagal memuat data. Pastikan server backend menyala.";
-      setErrorMsg(message);
-      setToast({ message, type: 'error' });
+      setErrorMsg("Gagal memuat data. Pastikan server backend menyala dan endpoint sudah ditambahkan.");
+      setToast({ message: "Gagal memuat data", type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -135,10 +167,15 @@ export default function AdminDashboard() {
 
     setActionLoading(id);
     try {
-      await axios.put(`${API_URL}/admin/leaves/${id}`, 
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${authToken}` } }
-      );
+      await fetch(`${API_URL}/admin/leaves/${id}`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      
       setLeaves(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l));
       setToast({ message: `Berhasil ${actionLabel} cuti.`, type: 'success' });
     } catch (error) {
@@ -151,6 +188,11 @@ export default function AdminDashboard() {
   const formatDate = useCallback((dateString: string) => 
     new Date(dateString).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }), []);
 
+  const formatTime = useCallback((timeString: string) => {
+    if (!timeString) return '–';
+    return timeString.substring(0, 5); // Format HH:MM
+  }, []);
+
   const getStatusBadge = useCallback((status: string) => {
     switch (status) {
       case 'approved': return <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Disetujui</span>;
@@ -159,22 +201,29 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  const getAttendanceStatusBadge = useCallback((status: string) => {
+    switch (status) {
+      case 'on_time': 
+        return (
+          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold inline-flex items-center gap-1">
+            <CheckCircle size={12} /> Tepat Waktu
+          </span>
+        );
+      case 'late': 
+        return (
+          <span className="px-2 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold inline-flex items-center gap-1">
+            <Clock size={12} /> Terlambat
+          </span>
+        );
+      default: 
+        return <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">–</span>;
+    }
+  }, []);
+
   const pendingCount = useMemo(() => leaves.filter(l => l.status === 'pending').length, [leaves]);
 
-  if (!authToken) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-        <div className="text-center">
-          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-800">Sesi Tidak Valid</h2>
-          <p className="text-gray-600 mt-2">Silakan login kembali sebagai Admin.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6 p-4 md:p-6 max-w-7xl mx-auto animate-fade-in">
+    <div className="space-y-6 p-4 md:p-6 max-w-7xl mx-auto">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -213,6 +262,59 @@ export default function AdminDashboard() {
             <StatCard icon={AlertTriangle} title="Terlambat" value={stats.late_entries} color="text-amber-600" />
           </>
         )}
+      </div>
+
+      {/* TABEL ABSENSI HARI INI */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h3 className="font-bold text-gray-800 flex items-center gap-2">
+            <CheckSquare className="w-5 h-5 text-blue-600" /> Absensi Hari Ini
+          </h3>
+          <span className="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-full">
+            {attendances.length} karyawan
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-xs text-gray-500 uppercase bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left">Nama</th>
+                <th className="px-4 py-3 text-left">Divisi</th>
+                <th className="px-4 py-3 text-center">Jam Masuk</th>
+                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-left">Keterangan</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {isLoading && attendances.length === 0 ? (
+                <tr><td colSpan={5} className="text-center py-10 text-gray-400">Memuat data...</td></tr>
+              ) : attendances.length === 0 ? (
+                <tr><td colSpan={5} className="text-center py-10 text-gray-400">Belum ada yang absen hari ini.</td></tr>
+              ) : (
+                attendances.map((attendance) => (
+                  <tr key={attendance.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-4">
+                      <div className="font-semibold text-gray-900">{attendance.karyawan?.nama || '–'}</div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="text-gray-600">{attendance.karyawan?.divisi?.nama || '–'}</div>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="font-mono text-gray-900 font-semibold">{formatTime(attendance.jam_masuk)}</div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex justify-center">{getAttendanceStatusBadge(attendance.status)}</div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="text-gray-600 text-sm">{attendance.keterangan || '–'}</div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* TABEL APPROVAL CUTI */}

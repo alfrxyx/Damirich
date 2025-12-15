@@ -4,16 +4,16 @@ import MainLayout from './components/Layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import LeaveRequest from './pages/LeaveRequest'; 
 import Login from './components/Auth/Login'; 
-// import Register from './pages/Register';
 import Settings from './pages/Settings'; 
 import AdminDashboard from './pages/AdminDashboard';
 import ManageKaryawan from './pages/ManageKaryawan';
+import Laporan from './pages/Laporan'; // 👈 Pastikan komponen ini diimpor
 
 // --- GUARD: PUBLIC ROUTE ---
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-    const token = localStorage.getItem('auth_token');
+    const token = sessionStorage.getItem('auth_token');
     if (token) {
-        const userString = localStorage.getItem('user_info');
+        const userString = sessionStorage.getItem('user_info');
         if (userString) {
             try {
                 const user = JSON.parse(userString);
@@ -21,7 +21,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
                     return <Navigate to="/admin/dashboard" replace />;
                 }
             } catch (e) {
-                localStorage.clear();
+                sessionStorage.clear();
             }
         }
         return <Navigate to="/" replace />;
@@ -31,7 +31,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
 // --- GUARD: PROTECTED ROUTE ---
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    const token = localStorage.getItem('auth_token');
+    const token = sessionStorage.getItem('auth_token');
     if (!token) return <Navigate to="/login" replace />;
     return <>{children}</>;
 };
@@ -41,29 +41,30 @@ function App() {
     return (
         <BrowserRouter>
             <Routes>
-                {/* HALAMAN LOGIN & REGISTER */}
+                {/* HALAMAN LOGIN */}
                 <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                {/* <Route path="/register" element={<Register />} /> */}
 
-                {/* === SEMUA HALAMAN YANG PAKAI SIDEBAR (USER & ADMIN) === */}
-                <Route element={
-                    <ProtectedRoute>
-                        <MainLayout /> {/* <--- INI KUNCINYA! Sidebar ada di sini */}
-                    </ProtectedRoute>
-                }>
-                    {/* 1. Area Karyawan */}
+                {/* SEMUA HALAMAN TERLINDUNGI DENGAN LAYOUT */}
+                <Route
+                    element={
+                        <ProtectedRoute>
+                            <MainLayout />
+                        </ProtectedRoute>
+                    }
+                >
+                    {/* User Routes */}
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/cuti" element={<LeaveRequest />} />
                     <Route path="/settings" element={<Settings />} />
 
-                    {/* 2. Area Admin (SEKARANG SUDAH PAKAI SIDEBAR JUGA) */}
-                    <Route path="/admin/dashboard" element={<AdminDashboard />}/>
-                    <Route path="/admin/karyawan" element={<ManageKaryawan/>}/>
-                    {/* Menu admin lain bisa ditambah di sini */}
+                    {/* Admin Routes */}
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="/admin/karyawan" element={<ManageKaryawan />} />
+                    <Route path="/admin/rekap-harian" element={<Laporan />} /> {/* ✅ Ditambahkan di sini */}
                     <Route path="/admin/rekap" element={<div className="p-6">Halaman Rekap</div>} />
                 </Route>
 
-                {/* Redirect Nyasar */}
+                {/* Redirect unknown routes */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </BrowserRouter>

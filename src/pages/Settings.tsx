@@ -7,7 +7,7 @@ export default function Settings() {
     const [regenerating, setRegenerating] = useState(false);
 
     useEffect(() => {
-        const userString = localStorage.getItem('user_info');
+        const userString = sessionStorage.getItem('user_info');
         if (userString) {
             setUser(JSON.parse(userString));
         }
@@ -63,7 +63,7 @@ export default function Settings() {
             // Simulasi update token
             const newToken = 'NEW_' + Math.random().toString(36).substr(2, 10).toUpperCase();
             const updatedUser = { ...user, attendance_token: newToken };
-            localStorage.setItem('user_info', JSON.stringify(updatedUser));
+            sessionStorage.setItem('user_info', JSON.stringify(updatedUser));
             setUser(updatedUser);
         } catch (err) {
             alert('Gagal memperbarui token. Coba lagi.');
@@ -257,7 +257,7 @@ export default function Settings() {
                                         >
                                             <Copy size={16} />
                                         </button>
-                                        <button 
+                                        {/* <button 
                                             onClick={regenerateToken}
                                             disabled={regenerating}
                                             className="p-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-70"
@@ -268,7 +268,7 @@ export default function Settings() {
                                             ) : (
                                                 <RefreshCw size={16} />
                                             )}
-                                        </button>
+                                        </button> */}
                                     </div>
                                 </div>
                                 

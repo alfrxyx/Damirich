@@ -1,0 +1,84 @@
+/* PulseButton.css */
+
+.btn-pulse {
+  border: none;
+  color: #fff;
+  background-image: linear-gradient(30deg, #0400ff, #4ce3f7);
+  border-radius: 20px;
+  background-size: 100% auto;
+  font-family: inherit;
+  font-size: 12px; /* Saya sesuaikan agar pas di dalam tabel */
+  padding: 0.6em 1.2em;
+  cursor: pointer;
+  transition: 0.5s;
+  
+  /* Tambahan agar Icon dan Teks sejajar */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 auto; /* Supaya posisi tengah di dalam kolom tabel */
+}
+
+.btn-pulse:hover {
+  background-position: right center;
+  background-size: 200% auto;
+  -webkit-animation: pulse 2s infinite;
+  animation: pulse512 1.5s infinite;
+}
+
+@keyframes pulse512 {
+  0% {
+    box-shadow: 0 0 0 0 #05bada66;
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgb(218 103 68 / 0%);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgb(218 103 68 / 0%);
+  }
+}
+
+
+/* --- VARIASI MERAH (UNTUK HAPUS) --- */
+.btn-pulse-red {
+  border: none;
+  color: #fff;
+  /* Gradasi Merah */
+  background-image: linear-gradient(30deg, #dc2626, #f87171);
+  border-radius: 20px;
+  background-size: 100% auto;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 0.6em 1.2em;
+  cursor: pointer;
+  transition: 0.5s;
+  
+  /* Flexbox biar rapi */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 auto;
+}
+
+.btn-pulse-red:hover {
+  background-position: right center;
+  background-size: 200% auto;
+  -webkit-animation: pulse-red 2s infinite;
+  animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
