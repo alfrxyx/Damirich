@@ -41,21 +41,19 @@ interface Attendance {
 const API_URL = 'http://127.0.0.1:8000/api';
 
 // =========================================================
-// KOMPONEN STAT CARD (Optimized with React.memo)
+// KOMPONEN STAT CARD ANIMASI 3D (Versi Uiverse.io)
 // =========================================================
-const StatCard = React.memo(({ icon: Icon, title, value, color }: {
-  icon: React.ElementType;
+const StatCard = React.memo(({ title, value, color }: {
   title: string;
-  value: number | undefined;
+  value: number | string;
   color: string;
 }) => (
-  <div className="bg-white p-5 rounded-xl shadow-sm flex items-center space-x-4 border border-gray-100 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
-    <div className={`p-3 rounded-full ${color} bg-opacity-10`}>
-      <Icon className={`w-6 h-6 ${color}`} />
-    </div>
-    <div>
-      <p className="text-sm font-medium text-gray-500">{title}</p>
-      <p className="text-2xl font-bold text-gray-900">{value !== undefined ? value.toLocaleString('id-ID') : '–'}</p>
+  <div className="animated-stat-card">
+    <div className="card">
+      <div className="content-box">
+        <span className="card-title">{title}</span>
+        <div className="card-value" style={{ color }}>{value}</div>
+      </div>
     </div>
   </div>
 ));
@@ -257,9 +255,21 @@ export default function AdminDashboard() {
           </>
         ) : (
           <>
-            <StatCard icon={Users} title="Total Karyawan" value={stats.total_employees} color="text-blue-600" />
-            <StatCard icon={BarChart2} title="Sudah Absen" value={stats.present_today} color="text-emerald-600" />
-            <StatCard icon={AlertTriangle} title="Terlambat" value={stats.late_entries} color="text-amber-600" />
+            <StatCard 
+              title="Total Karyawan" 
+              value={stats.total_employees ?? 0} 
+              color="#ffffffff" // biru
+            />
+            <StatCard 
+              title="Sudah Absen" 
+              value={stats.present_today ?? 0} 
+              color="#ffffffff" // hijau tua
+            />
+            <StatCard
+              title="Terlambat" 
+              value={stats.late_entries ?? 0} 
+              color="#ffffffff" // oranye tua
+            />
           </>
         )}
       </div>

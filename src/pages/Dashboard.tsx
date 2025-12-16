@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-// Hapus import QRCodeSVG karena tidak dipakai
+import QRScannerModal from '../components/QRScannerModal';
 import { 
   MapPin, 
   Loader2, 
@@ -26,11 +26,9 @@ export default function Dashboard() {
   const [currentAttendanceType, setCurrentAttendanceType] = useState<'clock-in' | 'clock-out' | null>(null);
   const [greeting, setGreeting] = useState('');
 
-  // --- QR MODAL STATE ---
-  const [qrInput, setQrInput] = useState('');
+  // --- STATE UNTUK ERROR & LOADING (tetap diperlukan untuk proses pasca-scan) ---
   const [qrModalLoading, setQrModalLoading] = useState(false);
   const [qrModalError, setQrModalError] = useState('');
-  const [modalStatus, setModalStatus] = useState('');
 
   const API_URL = 'http://127.0.0.1:8000/api';
 
@@ -91,52 +89,69 @@ export default function Dashboard() {
   const handleOpenQrModal = (type: 'clock-in' | 'clock-out') => {
     setCurrentAttendanceType(type);
     setQrModalError('');
-    setQrInput('');
-    setModalStatus('');
     setShowQrModal(true);
   };
 
-  // --- LOGIC SUBMIT ---
-  const handleQrSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setQrModalError('');
+  // --- LOGIC SETELAH SCAN BERHASIL ---
+// --- LOGIC SETELAH SCAN BERHASIL ---
+const handleScanResult = async (qrContent: string) => {
+  setQrModalLoading(true);
+  setQrModalError('');
+
+  try {
+    const position = await getCurrentLocation();
     
-    if (!qrInput && currentAttendanceType === 'clock-in') {
-      setQrModalError('Scan QR Kantor atau Masukkan Kode.');
-      return;
-    }
+    const payload = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      metode: 'qr',
+      qr_content: qrContent
+    };
 
-    setQrModalLoading(true);
+    await axios.post(`${API_URL}/absensi/${currentAttendanceType}`, payload, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    });
 
-    try {
-      setModalStatus('Mencari lokasi...');
-      const position = await getCurrentLocation();
-      
-      setModalStatus('Verifikasi...');
-      const payload = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        metode: 'qr',
-        qr_content: qrInput || '' 
-      };
+    // ✅ Setelah absen berhasil, ambil data terbaru
+    await fetchRiwayat();
+    setShowQrModal(false);
 
-      await axios.post(`${API_URL}/absensi/${currentAttendanceType}`, payload, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-      });
+    // Opsional: beri feedback sukses
+    alert(`Absensi ${currentAttendanceType === 'clock-in' ? 'Masuk' : 'Pulang'} berhasil!`);
 
-      setShowQrModal(false);
-      fetchRiwayat(); 
+} catch (err: any) {
+  console.error("Error Absen:", err);
 
-    } catch (err: any) {
-      console.error("Error Absen:", err);
-      if (err.code === 1) setQrModalError("Izinkan akses lokasi.");
-      else if (err.code === 2 || err.code === 3) setQrModalError("GPS Error.");
-      else setQrModalError(err.response?.data?.message || "Gagal absen.");
-    } finally {
-      setQrModalLoading(false);
-      setModalStatus('');
-    }
-  };
+  // ✅ Gunakan HTTP status, bukan teks pesan
+  if (err.response?.status === 403) {
+    // "Belum jam pulang"
+    setQrModalError('Belum jam pulang! Jam pulang adalah pukul 15:00.');
+    // Jangan tutup modal → user bisa coba lagi
+    return;
+  }
+
+  if (err.response?.status === 409) {
+    // "Sudah absen"
+    setQrModalError(err.response.data.message);
+    setShowQrModal(false);
+    return;
+  }
+
+  if (err.response?.status === 401) {
+    // "QR Code salah"
+    setQrModalError('QR Code salah! Scan QR Anda sendiri.');
+    setShowQrModal(false);
+    return;
+  }
+
+  // Error lain
+  const errorMsg = err.response?.data?.message || "Gagal absen.";
+  setQrModalError(errorMsg);
+  // Biarkan modal terbuka untuk coba ulang
+} finally {
+    setQrModalLoading(false);
+  }
+};
 
   // Status Badge Class
   const getStatusClass = (status: string) => {
@@ -171,7 +186,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 2. AREA KONTEN (QR CODE DIHAPUS, SISA KONTEN JADI LEBAR PENUH) */}
+      {/* 2. AREA KONTEN */}
       <div className="space-y-6">
         
         {/* Card Absensi Hari Ini */}
@@ -215,8 +230,9 @@ export default function Dashboard() {
                       style={{ 
                           '--radii': '0.75rem', 
                           '--size': '1rem',
-                          '--btn-bg-1': 'hsla(10, 80%, 60%, 1)', 
-                          '--btn-bg-2': 'hsla(350, 80%, 55%, 1)'
+                          '--btn-bg-1': 'hsla(0, 100%, 81%, 1.00)', 
+                          '--btn-bg-2': 'hsla(0, 100%, 39%, 1.00)',
+                          '--btn-bg-color': 'hsla(360 100% 100% / 1)',
                       } as React.CSSProperties}
                   >
                       <LogOut size={18} /> 
@@ -272,55 +288,14 @@ export default function Dashboard() {
 
       </div>
 
-      {/* MODAL SCAN (TETAP ADA UNTUK SCAN QR KANTOR) */}
-      {showQrModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 transform transition-all">
-                <div className="text-center mb-6">
-                   <h3 className="text-lg font-bold text-gray-900">
-                      {currentAttendanceType === 'clock-in' ? 'Scan ID Masuk' : 'Scan ID Pulang'}
-                   </h3>
-                   <p className="text-sm text-gray-500 mt-1">Arahkan kamera ke QR Code Kantor</p>
-                </div>
-
-                {qrModalError && (
-                    <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-start gap-2">
-                        <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                        {qrModalError}
-                    </div>
-                )}
-
-                <form onSubmit={handleQrSubmit}>
-                    <input 
-                        type="text" 
-                        value={qrInput} 
-                        onChange={(e) => setQrInput(e.target.value)} 
-                        placeholder="Klik disini untuk scan..." 
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none text-center font-mono text-lg mb-4 transition-all"
-                        autoFocus 
-                    />
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                        <button 
-                            type="button" 
-                            onClick={() => setShowQrModal(false)} 
-                            className="py-2.5 rounded-lg border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors"
-                        >
-                            Batal
-                        </button>
-                        <button 
-                            type="submit" 
-                            disabled={qrModalLoading}
-                            className="btn-donate w-full flex items-center justify-center gap-2 disabled:opacity-50"
-                            style={{ '--radii': '0.5rem', '--size': '0.9rem' } as React.CSSProperties}
-                        >
-                            {qrModalLoading ? <Loader2 className="animate-spin w-4 h-4"/> : 'Submit'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-      )}
+      {/* ✅ MODAL BARU: SCAN QR DENGAN KAMERA */}
+      <QRScannerModal
+        isOpen={showQrModal}
+        onClose={() => setShowQrModal(false)}
+        onScanSuccess={handleScanResult} // ← tetap pakai fungsi asli Anda
+        attendanceType={currentAttendanceType || 'clock-in'}
+        error={qrModalError} // ← Tambahkan baris ini
+      />
     </div>
   );
 }
